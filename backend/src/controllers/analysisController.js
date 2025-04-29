@@ -1,50 +1,29 @@
 // Import required modules
-const OpenAI = require('openai');
-// Import models (to be created)
-const Analysis = require('../models/Analysis');
 const Product = require('../models/Product');
+const Analysis = require('../models/Analysis');
+const { generateProductAnalysis, generateProductComparison } = require('../config/openai');
+const { parseAnalysisResponse, generateComparisonSummary } = require('../utils/parseAnalysis');
 
-// Configure OpenAI API
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
-// Analyze product based on text description
-exports.analyzeProductText = async (req, res) => {
+/**
+ * Analyze product based on text description
+ * @route POST /api/analysis/analyze-text
+ */
+exports.analyzeProductText = async (req, res, next) => {
   try {
     const { productText } = req.body;
     
-    if (!productText) {
+    if (!productText || productText.trim() === '') {
       return res.status(400).json({ message: 'Product text is required' });
     }
 
-    // OpenAI API call to analyze product description
-    const response = await openai.chat.completions.create({
-      model: "gpt-4", // or other appropriate model
-      messages: [
-        {
-          role: "system",
-          content: "You are an environmental impact analyzer. Analyze the following product description and provide an environmental impact assessment with scores for carbon footprint, water usage, resource consumption, and overall sustainability on a scale of 1-10 (10 being most sustainable). Also provide a brief explanation and suggestions for improvement."
-        },
-        {
-          role: "user",
-          content: productText
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 1000,
-    });
-
-    // Extract analysis from OpenAI response
-    const analysisText = response.choices[0].message.content;
+    // Generate analysis using OpenAI
+    const analysisText = await generateProductAnalysis(productText);
     
     // Parse the analysis to extract scores and explanation
-    // This is a simplified version - in a real app, you would implement 
-    // more robust parsing or structure the prompt differently
     const analysisResult = parseAnalysisResponse(analysisText);
     
     // Create new analysis record
-    const analysis = new Analysis({
+    const analysis = await Analysis.createAnalysis({
       productDescription: productText,
       scores: analysisResult.scores,
       explanation: analysisResult.explanation,
@@ -52,21 +31,32 @@ exports.analyzeProductText = async (req, res) => {
       rawAnalysis: analysisText
     });
     
-    await analysis.save();
-    
     res.status(200).json(analysis);
   } catch (error) {
-    console.error('Error analyzing product:', error);
-    res.status(500).json({ message: 'Error analyzing product', error: error.message });
+    next(error);
   }
 };
 
-// Analyze existing product by ID
-exports.analyzeExistingProduct = async (req, res) => {
+/**
+ * Analyze existing product by ID
+ * @route POST /api/analysis/analyze-product/:id
+ */
+exports.analyzeExistingProduct = async (req, res, next) => {
   try {
-    const product = await Product.findById(req.params.id);
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
+    const product = await Product.getProductById(req.params.id);
+    
+    // Check if recent analysis exists
+    const forceReanalysis = req.query.force === 'true';
+    
+    if (!forceReanalysis) {
+      const existingAnalysis = await Analysis.getRecentProductAnalysis(product.id, 24); // 24 hours
+      
+      if (existingAnalysis) {
+        return res.status(200).json({
+          ...existingAnalysis,
+          message: 'Using existing recent analysis. Set ?force=true to reanalyze.'
+        });
+      }
     }
     
     // Combine product details for analysis
@@ -75,34 +65,17 @@ exports.analyzeExistingProduct = async (req, res) => {
       Description: ${product.description}
       Category: ${product.category}
       Materials: ${product.materials.join(', ')}
-      Manufacturing Location: ${product.manufacturingLocation}
-      Additional Details: ${product.additionalDetails || 'None'}
+      Manufacturing Location: ${product.manufacturing_location}
+      Additional Details: ${product.additional_details || 'None'}
     `;
     
-    // Make request to OpenAI with the product text
-    // This is similar to the analyzeProductText method
-    const response = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        {
-          role: "system",
-          content: "You are an environmental impact analyzer. Analyze the following product information and provide an environmental impact assessment with scores for carbon footprint, water usage, resource consumption, and overall sustainability on a scale of 1-10 (10 being most sustainable). Also provide a brief explanation and suggestions for improvement."
-        },
-        {
-          role: "user",
-          content: productText
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 1000,
-    });
-
-    const analysisText = response.choices[0].message.content;
+    // Generate analysis using OpenAI
+    const analysisText = await generateProductAnalysis(productText);
     const analysisResult = parseAnalysisResponse(analysisText);
     
     // Create new analysis record
-    const analysis = new Analysis({
-      product: product._id,
+    const analysis = await Analysis.createAnalysis({
+      product: product.id,
       productDescription: productText,
       scores: analysisResult.scores,
       explanation: analysisResult.explanation,
@@ -110,40 +83,61 @@ exports.analyzeExistingProduct = async (req, res) => {
       rawAnalysis: analysisText
     });
     
-    await analysis.save();
+    res.status(200).json(analysis);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get analysis history
+ * @route GET /api/analysis/history
+ */
+exports.getAnalysisHistory = async (req, res, next) => {
+  try {
+    // Apply pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
     
+    const result = await Analysis.getAnalysisHistory({ page, limit });
+    
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get analysis by ID
+ * @route GET /api/analysis/:id
+ */
+exports.getAnalysisById = async (req, res, next) => {
+  try {
+    const analysis = await Analysis.getAnalysisById(req.params.id);
     res.status(200).json(analysis);
   } catch (error) {
-    console.error('Error analyzing product:', error);
-    res.status(500).json({ message: 'Error analyzing product', error: error.message });
+    next(error);
   }
 };
 
-// Get analysis history
-exports.getAnalysisHistory = async (req, res) => {
+/**
+ * Get latest analysis for a product
+ * @route GET /api/analysis/product/:id
+ */
+exports.getProductAnalysis = async (req, res, next) => {
   try {
-    const analyses = await Analysis.find().populate('product');
-    res.status(200).json(analyses);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching analysis history', error: error.message });
-  }
-};
-
-// Get analysis by ID
-exports.getAnalysisById = async (req, res) => {
-  try {
-    const analysis = await Analysis.findById(req.params.id).populate('product');
-    if (!analysis) {
-      return res.status(404).json({ message: 'Analysis not found' });
-    }
+    const analysis = await Analysis.getLatestProductAnalysis(req.params.id);
     res.status(200).json(analysis);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching analysis', error: error.message });
+    next(error);
   }
 };
 
-// Compare multiple products
-exports.compareProducts = async (req, res) => {
+/**
+ * Compare multiple products
+ * @route POST /api/analysis/compare
+ */
+exports.compareProducts = async (req, res, next) => {
   try {
     const { productIds } = req.body;
     
@@ -151,100 +145,64 @@ exports.compareProducts = async (req, res) => {
       return res.status(400).json({ message: 'At least two product IDs are required for comparison' });
     }
     
-    // Get analyses for all products
-    const analyses = await Analysis.find({
-      product: { $in: productIds }
-    }).populate('product');
+    if (productIds.length > 3) {
+      return res.status(400).json({ message: 'Maximum 3 products can be compared at once' });
+    }
     
+    // Get the latest analysis for each product
+    const analyses = await Analysis.getAnalysesForComparison(productIds);
+    
+    // Check if all products have analyses
     if (analyses.length !== productIds.length) {
-      return res.status(404).json({ message: 'One or more products have not been analyzed yet' });
+      const missingProductIds = productIds.filter(id => 
+        !analyses.some(analysis => analysis.product && analysis.product.id === id)
+      );
+      
+      try {
+        // Get missing product names
+        const missingProducts = await Promise.all(
+          missingProductIds.map(id => Product.getProductById(id))
+        );
+        
+        const missingNames = missingProducts.map(p => p.name).join(', ');
+        
+        return res.status(404).json({ 
+          message: `Some products have not been analyzed yet: ${missingNames}`,
+          missingProductIds
+        });
+      } catch (err) {
+        return res.status(404).json({ 
+          message: 'Some products have not been analyzed yet',
+          missingProductIds
+        });
+      }
+    }
+    
+    // Generate comprehensive comparison using OpenAI (optional)
+    let comparisonText = null;
+    if (req.query.detailed === 'true') {
+      comparisonText = await generateProductComparison(analyses);
     }
     
     // Create comparison object
     const comparison = {
       products: analyses.map(analysis => ({
-        id: analysis.product._id,
+        id: analysis.product.id,
         name: analysis.product.name,
+        category: analysis.product.category,
+        materials: analysis.product.materials,
+        manufacturingLocation: analysis.product.manufacturing_location,
+        imageUrl: analysis.product.image_url,
         scores: analysis.scores,
-        explanation: analysis.explanation
+        explanation: analysis.explanation,
+        createdAt: analysis.createdAt
       })),
-      summary: generateComparisonSummary(analyses)
+      summary: generateComparisonSummary(analyses),
+      detailedComparison: comparisonText
     };
     
     res.status(200).json(comparison);
   } catch (error) {
-    res.status(500).json({ message: 'Error comparing products', error: error.message });
+    next(error);
   }
 };
-
-// Helper function to parse the OpenAI analysis response
-function parseAnalysisResponse(analysisText) {
-  // This is a simplified parser
-  // In a real application, you would implement a more robust parsing logic
-  // or structure the OpenAI prompt to return a specific format (like JSON)
-  
-  // Example implementation:
-  const scores = {
-    carbon: extractScore(analysisText, 'carbon') || 5,
-    water: extractScore(analysisText, 'water') || 5,
-    resources: extractScore(analysisText, 'resource') || 5,
-    overall: extractScore(analysisText, 'overall') || extractScore(analysisText, 'sustainability') || 5
-  };
-  
-  // Extract explanation (simplified)
-  const explanationMatch = analysisText.match(/explanation:(.+?)(suggestions:|$)/is);
-  const explanation = explanationMatch ? explanationMatch[1].trim() : 'No explanation provided';
-  
-  // Extract suggestions (simplified)
-  const suggestionsMatch = analysisText.match(/suggestions:(.+)$/is);
-  const suggestions = suggestionsMatch ? suggestionsMatch[1].trim() : 'No suggestions provided';
-  
-  return {
-    scores,
-    explanation,
-    suggestions
-  };
-}
-
-// Helper function to extract scores from analysis text
-function extractScore(text, category) {
-  const regex = new RegExp(`${category}[^\\d]+(\\d+)`, 'i');
-  const match = text.match(regex);
-  return match ? parseInt(match[1], 10) : null;
-}
-
-// Helper function to generate comparison summary
-function generateComparisonSummary(analyses) {
-  // Find the product with the best overall score
-  const bestProduct = [...analyses].sort((a, b) => 
-    b.scores.overall - a.scores.overall
-  )[0];
-  
-  // Calculate average scores across all products
-  const avgScores = {
-    carbon: 0,
-    water: 0,
-    resources: 0,
-    overall: 0
-  };
-  
-  analyses.forEach(analysis => {
-    avgScores.carbon += analysis.scores.carbon;
-    avgScores.water += analysis.scores.water;
-    avgScores.resources += analysis.scores.resources;
-    avgScores.overall += analysis.scores.overall;
-  });
-  
-  Object.keys(avgScores).forEach(key => {
-    avgScores[key] = avgScores[key] / analyses.length;
-  });
-  
-  return {
-    bestProduct: {
-      id: bestProduct.product._id,
-      name: bestProduct.product.name,
-      score: bestProduct.scores.overall
-    },
-    averageScores: avgScores
-  };
-}
