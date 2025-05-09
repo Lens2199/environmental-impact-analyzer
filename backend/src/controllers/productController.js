@@ -1,83 +1,119 @@
-// Import model (to be created)
+// Import Product model (adapted for Supabase)
 const Product = require('../models/Product');
 
-// Get all products
-exports.getAllProducts = async (req, res) => {
+/**
+ * Get all products with pagination and filtering
+ * @route GET /api/products
+ */
+exports.getAllProducts = async (req, res, next) => {
   try {
-    const products = await Product.find();
-    res.status(200).json(products);
+    const { page, limit, category, search, sortBy, sortOrder } = req.query;
+    
+    const options = {
+      page: parseInt(page) || 1,
+      limit: parseInt(limit) || 10,
+      category,
+      search,
+      sortBy: sortBy || 'created_at',
+      sortOrder: sortOrder || 'desc'
+    };
+    
+    const result = await Product.getAllProducts(options);
+    
+    res.status(200).json(result);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching products', error: error.message });
+    next(error);
   }
 };
 
-// Get product by ID
-exports.getProductById = async (req, res) => {
+/**
+ * Get product by ID
+ * @route GET /api/products/:id
+ */
+exports.getProductById = async (req, res, next) => {
   try {
-    const product = await Product.findById(req.params.id);
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
+    const product = await Product.getProductById(req.params.id);
     res.status(200).json(product);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching product', error: error.message });
+    if (error.message === 'Product not found') {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+    next(error);
   }
 };
 
-// Create new product
-exports.createProduct = async (req, res) => {
+/**
+ * Create new product
+ * @route POST /api/products
+ */
+exports.createProduct = async (req, res, next) => {
   try {
-    const product = new Product(req.body);
-    await product.save();
+    // Transform camelCase to snake_case if needed
+    const productData = {
+      ...req.body,
+      manufacturingLocation: req.body.manufacturingLocation,
+      additionalDetails: req.body.additionalDetails,
+      imageUrl: req.body.imageUrl
+    };
+    
+    const product = await Product.createProduct(productData);
     res.status(201).json(product);
   } catch (error) {
-    res.status(400).json({ message: 'Error creating product', error: error.message });
+    next(error);
   }
 };
 
-// Update product
-exports.updateProduct = async (req, res) => {
+/**
+ * Update product
+ * @route PUT /api/products/:id
+ */
+exports.updateProduct = async (req, res, next) => {
   try {
-    const product = await Product.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
+    const product = await Product.updateProduct(req.params.id, req.body);
     res.status(200).json(product);
   } catch (error) {
-    res.status(400).json({ message: 'Error updating product', error: error.message });
-  }
-};
-
-// Delete product
-exports.deleteProduct = async (req, res) => {
-  try {
-    const product = await Product.findByIdAndDelete(req.params.id);
-    if (!product) {
+    if (error.message === 'Product not found') {
       return res.status(404).json({ message: 'Product not found' });
     }
-    res.status(200).json({ message: 'Product deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ message: 'Error deleting product', error: error.message });
+    next(error);
   }
 };
 
-// Search products
-exports.searchProducts = async (req, res) => {
+/**
+ * Delete product
+ * @route DELETE /api/products/:id
+ */
+exports.deleteProduct = async (req, res, next) => {
   try {
-    const query = req.params.query;
-    const products = await Product.find({
-      $or: [
-        { name: { $regex: query, $options: 'i' } },
-        { description: { $regex: query, $options: 'i' } },
-        { category: { $regex: query, $options: 'i' } }
-      ]
-    });
+    await Product.deleteProduct(req.params.id);
+    res.status(200).json({ message: 'Product deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Search products
+ * @route GET /api/products/search/:query
+ */
+exports.searchProducts = async (req, res, next) => {
+  try {
+    const products = await Product.searchProducts(req.params.query);
     res.status(200).json(products);
   } catch (error) {
-    res.status(500).json({ message: 'Error searching products', error: error.message });
+    next(error);
+  }
+};
+
+/**
+ * Get products by category
+ * @route GET /api/products/category/:category
+ */
+exports.getProductsByCategory = async (req, res, next) => {
+  try {
+    const products = await Product.getProductsByCategory(req.params.category);
+    res.status(200).json(products);
+  } catch (error) {
+    next(error);
   }
 };
