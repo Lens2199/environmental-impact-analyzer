@@ -8,7 +8,8 @@ import {
   Card, 
   CardContent, 
   CardMedia,
-  CardActions
+  CardActions,
+  Divider
 } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import SearchIcon from '@mui/icons-material/Search';
@@ -18,6 +19,8 @@ import EcoIcon from '@mui/icons-material/Eco';
 import RecyclingIcon from '@mui/icons-material/Recycling';
 import WaterIcon from '@mui/icons-material/Water';
 import SpaIcon from '@mui/icons-material/Spa';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import Dashboard from '../components/dashboard/Dashboard';
 
 function HomePage() {
   return (
@@ -87,9 +90,21 @@ function HomePage() {
         </Container>
       </Box>
 
-      {/* Features Section */}
-      <Container sx={{ py: 8 }} maxWidth="lg">
-        <Typography variant="h3" textAlign="center" gutterBottom>
+      {/* Dashboard Section */}
+      <Container sx={{ py: 6 }} maxWidth="lg">
+        <Typography variant="h4" textAlign="center" gutterBottom>
+          Your Sustainability Dashboard
+        </Typography>
+        <Typography variant="body1" textAlign="center" paragraph sx={{ mb: 4 }}>
+          Track and analyze the environmental impact of various products
+        </Typography>
+        
+        <Dashboard />
+
+        <Divider sx={{ my: 6 }} />
+        
+        {/* Features Section */}
+        <Typography variant="h4" textAlign="center" gutterBottom>
           How It Works
         </Typography>
         <Typography variant="h6" textAlign="center" color="text.secondary" paragraph sx={{ mb: 6 }}>
@@ -201,7 +216,7 @@ function HomePage() {
                   </Typography>
                 </CardContent>
                 <CardActions sx={{ justifyContent: 'center', pb: 2 }}>
-                  <Button size="small" component={RouterLink} to="/about">Learn More</Button>
+                  <Button size="small" component={RouterLink} to="/guide">Learn More</Button>
                 </CardActions>
               </Card>
             </Grid>
@@ -229,7 +244,7 @@ function HomePage() {
                   </Typography>
                 </CardContent>
                 <CardActions sx={{ justifyContent: 'center', pb: 2 }}>
-                  <Button size="small" component={RouterLink} to="/about">Learn More</Button>
+                  <Button size="small" component={RouterLink} to="/guide">Learn More</Button>
                 </CardActions>
               </Card>
             </Grid>
@@ -257,13 +272,50 @@ function HomePage() {
                   </Typography>
                 </CardContent>
                 <CardActions sx={{ justifyContent: 'center', pb: 2 }}>
-                  <Button size="small" component={RouterLink} to="/about">Learn More</Button>
+                  <Button size="small" component={RouterLink} to="/guide">Learn More</Button>
                 </CardActions>
               </Card>
             </Grid>
           </Grid>
         </Container>
       </Box>
+
+      {/* Guide Section */}
+      <Container sx={{ py: 8 }} maxWidth="lg">
+        <Grid container spacing={4} alignItems="center">
+          <Grid item xs={12} md={6}>
+            <Typography variant="h3" gutterBottom>
+              Sustainability Guide
+            </Typography>
+            <Typography variant="body1" paragraph>
+              Our comprehensive sustainability guide provides practical recommendations for evaluating products across different environmental impact categories.
+            </Typography>
+            <Typography variant="body1" paragraph>
+              Learn about sustainable materials, water conservation, energy efficiency, and more to make better-informed purchasing decisions.
+            </Typography>
+            <Button
+              variant="contained"
+              size="large"
+              component={RouterLink}
+              to="/guide"
+              startIcon={<MenuBookIcon />}
+              sx={{ mt: 2 }}
+            >
+              Explore the Guide
+            </Button>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardMedia
+                component="img"
+                height="300"
+                image="https://via.placeholder.com/600x300?text=Sustainability+Guide"
+                alt="Sustainability Guide"
+              />
+            </Card>
+          </Grid>
+        </Grid>
+      </Container>
 
       {/* Call to Action Section */}
       <Box
