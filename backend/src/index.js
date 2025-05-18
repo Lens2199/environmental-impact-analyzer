@@ -1,3 +1,4 @@
+// Load environment variables
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -14,13 +15,15 @@ const analysisRoutes = require('./routes/analysisRoutes');
 // Initialize Express app
 const app = express();
 
-// Middleware
+// Set up CORS with environment variable for origin
 app.use(cors({
-  origin: 'http://localhost:3000', // Your frontend URL
+  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
+
+// Middleware
 app.use(express.json());
 app.use(morgan('dev'));
 
@@ -34,6 +37,7 @@ app.get('/', (req, res) => {
     status: 'online',
     message: 'Environmental Impact Analyzer API is running',
     environment: process.env.NODE_ENV || 'development',
+    version: '1.0.0'
   });
 });
 
@@ -71,22 +75,41 @@ const startServer = async () => {
       process.exit(1);
     }
     
-    // Seed database with sample data in development mode
+    // Seed database with sample data if enabled
     if (process.env.NODE_ENV !== 'production' && process.env.SEED_DB === 'true') {
+      console.log('Seeding database...');
       await seedDatabase();
+      console.log('Database seeded successfully');
     }
     
+    // Get port from environment variable or use default
+    const PORT = process.env.PORT || 5010;
+    
     // Start listening for requests
-    const PORT = 5010; // Hard-coded port number
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+    app.listen(PORT, () => {
+      console.log(`✅ Server running on port ${PORT}`);
+      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🔒 CORS Origin: ${process.env.CORS_ORIGIN || 'http://localhost:3000'}`);
+      console.log(`🚀 API available at: http://localhost:${PORT}/api`);
+    });
 
   } catch (error) {
     console.error('Failed to start server:', error);
+    console.error(error.stack);
     process.exit(1);
   }
 };
+
+// Handle unexpected errors
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (error) => {
+  console.error('Unhandled Rejection:', error);
+  process.exit(1);
+});
 
 // Run the server
 startServer();
