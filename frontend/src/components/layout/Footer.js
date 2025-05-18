@@ -1,8 +1,13 @@
 import React from 'react';
 import { Box, Container, Typography, Link, Grid } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
-import EcoIcon from '@mui/icons-material/Eco';
-import GitHubIcon from '@mui/icons-material/GitHub';
+
+import { 
+  GitHub as GitHubIcon
+} from '@mui/icons-material'
+
+import EcoIcon from '../icons/EcoIcon';
+
 
 function Footer() {
   return (
@@ -43,25 +48,24 @@ function Footer() {
             <Link component={RouterLink} to="/analyze" color="inherit" sx={{ display: 'block', mb: 1 }}>
               Analyze a Product
             </Link>
-            <Link component={RouterLink} to="/about" color="inherit" sx={{ display: 'block' }}>
-              About
-            </Link>
+            {/* About link removed */}
           </Grid>
           
           <Grid item xs={12} sm={4}>
             <Typography variant="h6" gutterBottom>
               Resources
             </Typography>
-            <Link href="https://github.com/YOUR-USERNAME/environmental-impact-analyzer" target="_blank" rel="noopener" color="inherit" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+            <Link href="https://github.com/Lens2199/environmental-impact-analyzer" target="_blank" rel="noopener" color="inherit" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
               <GitHubIcon sx={{ mr: 1, fontSize: 18 }} />
               GitHub Repository
             </Link>
             <Link href="https://openai.com" target="_blank" rel="noopener" color="inherit" sx={{ display: 'block', mb: 1 }}>
               OpenAI
             </Link>
-            <Link href="https://www.epa.gov" target="_blank" rel="noopener" color="inherit" sx={{ display: 'block' }}>
+            <Link href="https://www.epa.gov" target="_blank" rel="noopener" color="inherit" sx={{ display: 'block', mb: 1 }}>
               Environmental Protection Agency
             </Link>
+            {/* Added margin-bottom to the last link to make spacing consistent */}
           </Grid>
         </Grid>
         

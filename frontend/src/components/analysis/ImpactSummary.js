@@ -13,7 +13,7 @@ import {
 import RecyclingIcon from '@mui/icons-material/Recycling';
 import WaterIcon from '@mui/icons-material/Water';
 import SpaIcon from '@mui/icons-material/Spa';
-import EcoIcon from '@mui/icons-material/Eco';
+import EcoIcon from '../icons/EcoIcon';
 import ScoreDisplay from './ScoreDisplay';
 import { truncateText, formatDate } from '../../utils/helpers';
 

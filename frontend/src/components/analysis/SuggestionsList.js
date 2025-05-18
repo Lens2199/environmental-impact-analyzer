@@ -14,7 +14,7 @@ import {
   IconButton
 } from '@mui/material';
 import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates';
-import EcoIcon from '@mui/icons-material/Eco';
+import EcoIcon from '../icons/EcoIcon';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { copyToClipboard } from '../../utils/helpers';
 

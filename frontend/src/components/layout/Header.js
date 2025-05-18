@@ -13,12 +13,15 @@ import {
   useMediaQuery,
   useTheme
 } from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
-import EcoIcon from '@mui/icons-material/Eco';
-import SearchIcon from '@mui/icons-material/Search';
-import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
-import InfoIcon from '@mui/icons-material/Info';
-import AnalyticsIcon from '@mui/icons-material/Analytics';
+
+import { 
+  Menu as MenuIcon,
+  Search as SearchIcon,
+  CompareArrows as CompareArrowsIcon,
+  Analytics as AnalyticsIcon
+} from '@mui/icons-material';
+
+import EcoIcon from '../icons/EcoIcon';
 
 function Header() {
   const location = useLocation();
@@ -42,8 +45,8 @@ function Header() {
     { label: 'Home', path: '/', icon: <EcoIcon sx={{ mr: 1 }} /> },
     { label: 'Search Products', path: '/search', icon: <SearchIcon sx={{ mr: 1 }} /> },
     { label: 'Analyze', path: '/analyze', icon: <AnalyticsIcon sx={{ mr: 1 }} /> },
-    { label: 'Compare', path: '/compare', icon: <CompareArrowsIcon sx={{ mr: 1 }} /> },
-    { label: 'About', path: '/about', icon: <InfoIcon sx={{ mr: 1 }} /> }
+    { label: 'Compare', path: '/compare', icon: <CompareArrowsIcon sx={{ mr: 1 }} /> }
+    // Removed About link
   ];
   
   return (

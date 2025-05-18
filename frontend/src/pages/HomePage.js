@@ -9,18 +9,18 @@ import {
   CardContent, 
   CardMedia,
   CardActions,
-  Divider
+  Divider,
+  Paper
 } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import SearchIcon from '@mui/icons-material/Search';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
-import EcoIcon from '@mui/icons-material/Eco';
+import EcoIcon from '../components/icons/EcoIcon';
 import RecyclingIcon from '@mui/icons-material/Recycling';
 import WaterIcon from '@mui/icons-material/Water';
 import SpaIcon from '@mui/icons-material/Spa';
-import MenuBookIcon from '@mui/icons-material/MenuBook';
-import Dashboard from '../components/dashboard/Dashboard';
+// Removed Dashboard import
 
 function HomePage() {
   return (
@@ -90,16 +90,40 @@ function HomePage() {
         </Container>
       </Box>
 
-      {/* Dashboard Section */}
+      {/* Quick Start Section (Replacing Dashboard) */}
       <Container sx={{ py: 6 }} maxWidth="lg">
         <Typography variant="h4" textAlign="center" gutterBottom>
-          Your Sustainability Dashboard
+          Start Analyzing Products
         </Typography>
         <Typography variant="body1" textAlign="center" paragraph sx={{ mb: 4 }}>
-          Track and analyze the environmental impact of various products
+          Discover the environmental impact of consumer products with our AI-powered analysis tool
         </Typography>
         
-        <Dashboard />
+        {/* Simple call-to-action card replacing the Dashboard */}
+        <Paper elevation={2} sx={{ p: 4, mb: 4, borderRadius: 2, bgcolor: 'background.paper' }}>
+          <Grid container spacing={3} alignItems="center">
+            <Grid item xs={12} md={8}>
+              <Typography variant="h5" gutterBottom>
+                Ready to analyze a product?
+              </Typography>
+              <Typography variant="body1">
+                Our AI-powered tool evaluates products based on materials, manufacturing processes, and supply chain information to provide comprehensive environmental impact scores.
+              </Typography>
+            </Grid>
+            <Grid item xs={12} md={4} sx={{ textAlign: 'center' }}>
+              <Button
+                variant="contained"
+                size="large"
+                component={RouterLink}
+                to="/analyze"
+                startIcon={<AnalyticsIcon />}
+                sx={{ px: 4, py: 1.5 }}
+              >
+                Start Analysis
+              </Button>
+            </Grid>
+          </Grid>
+        </Paper>
 
         <Divider sx={{ my: 6 }} />
         
@@ -216,7 +240,7 @@ function HomePage() {
                   </Typography>
                 </CardContent>
                 <CardActions sx={{ justifyContent: 'center', pb: 2 }}>
-                  <Button size="small" component={RouterLink} to="/guide">Learn More</Button>
+                  <Button size="small" component={RouterLink} to="/analyze">Analyze Now</Button>
                 </CardActions>
               </Card>
             </Grid>
@@ -244,7 +268,7 @@ function HomePage() {
                   </Typography>
                 </CardContent>
                 <CardActions sx={{ justifyContent: 'center', pb: 2 }}>
-                  <Button size="small" component={RouterLink} to="/guide">Learn More</Button>
+                  <Button size="small" component={RouterLink} to="/analyze">Analyze Now</Button>
                 </CardActions>
               </Card>
             </Grid>
@@ -272,7 +296,7 @@ function HomePage() {
                   </Typography>
                 </CardContent>
                 <CardActions sx={{ justifyContent: 'center', pb: 2 }}>
-                  <Button size="small" component={RouterLink} to="/guide">Learn More</Button>
+                  <Button size="small" component={RouterLink} to="/analyze">Analyze Now</Button>
                 </CardActions>
               </Card>
             </Grid>
@@ -280,40 +304,31 @@ function HomePage() {
         </Container>
       </Box>
 
-      {/* Guide Section */}
+      {/* Product Comparison Section (replacing Guide Section) - UPDATED */}
       <Container sx={{ py: 8 }} maxWidth="lg">
-        <Grid container spacing={4} alignItems="center">
-          <Grid item xs={12} md={6}>
+        <Grid container>
+          <Grid item xs={12}>
             <Typography variant="h3" gutterBottom>
-              Sustainability Guide
+              Compare Products
             </Typography>
             <Typography variant="body1" paragraph>
-              Our comprehensive sustainability guide provides practical recommendations for evaluating products across different environmental impact categories.
+              Our comparison tool helps you identify the most sustainable options by analyzing and contrasting the environmental impact of similar products.
             </Typography>
             <Typography variant="body1" paragraph>
-              Learn about sustainable materials, water conservation, energy efficiency, and more to make better-informed purchasing decisions.
+              Make informed decisions by directly comparing environmental scores across multiple categories including carbon footprint, water usage, and resource consumption.
             </Typography>
             <Button
               variant="contained"
               size="large"
               component={RouterLink}
-              to="/guide"
-              startIcon={<MenuBookIcon />}
+              to="/search"
+              startIcon={<CompareArrowsIcon />}
               sx={{ mt: 2 }}
             >
-              Explore the Guide
+              Find Products to Compare
             </Button>
           </Grid>
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardMedia
-                component="img"
-                height="300"
-                image="https://via.placeholder.com/600x300?text=Sustainability+Guide"
-                alt="Sustainability Guide"
-              />
-            </Card>
-          </Grid>
+          {/* Image grid item removed */}
         </Grid>
       </Container>
 

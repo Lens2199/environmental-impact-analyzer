@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -17,14 +18,16 @@ import {
   Tab,
   LinearProgress
 } from '@mui/material';
-import SendIcon from '@mui/icons-material/Send';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
-import EcoIcon from '@mui/icons-material/Eco';
+import EcoIcon from '../components/icons/EcoIcon';
 import WaterIcon from '@mui/icons-material/Water';
 import SpaIcon from '@mui/icons-material/Spa';
-import RecyclingIcon from '@mui/icons-material/Recycling';
+import RecyclingIcon from '../components/icons/RecyclingIcon';  // Adjust path
 import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates';
-import axios from 'axios';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+
+// Replace the direct axios import with the API service
+import { analysisAPI, productAPI } from '../services/api'; // Make sure path is correct
 
 // Component for displaying individual score
 const ScoreCircle = ({ score, label, icon }) => {
@@ -70,20 +73,189 @@ const ScoreCircle = ({ score, label, icon }) => {
 };
 
 function AnalysisPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  
   const [productText, setProductText] = useState('');
   const [loading, setLoading] = useState(false);
+  const [fetchingProduct, setFetchingProduct] = useState(false);
   const [error, setError] = useState('');
   const [analysis, setAnalysis] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
+  const [productDetails, setProductDetails] = useState(null);
+  
+  // Get product data from navigation state
+  const { state } = location;
+  const productFromState = state?.productData;
+  const autoAnalyzeFromState = state?.autoAnalyze || false;
+  
+  // For backward compatibility, still check URL params
+  const params = new URLSearchParams(location.search);
+  const productId = params.get('productId');
+  const autoStart = params.get('autoStart') === 'true' || autoAnalyzeFromState;
+  
+  // Function to fetch product details
+  
+  // Format product details into text for analysis
+  const formatProductDetails = (product) => {
+    if (!product) return '';
+    
+    let formattedText = `${product.name}\n\n`;
+    
+    if (product.category) {
+      formattedText += `Category: ${product.category}\n\n`;
+    }
+    
+    if (product.description) {
+      formattedText += `Description: ${product.description}\n\n`;
+    }
+    
+    if (Array.isArray(product.materials) && product.materials.length > 0) {
+      formattedText += `Materials: ${product.materials.join(', ')}\n\n`;
+    }
+    
+    if (product.manufacturingLocation) {
+      formattedText += `Manufacturing Location: ${product.manufacturingLocation}\n\n`;
+    }
+    
+    return formattedText.trim();
+  };
+  
+  // Effect to handle auto-analysis for product coming from state or URL
+  useEffect(() => {
+    const handleAutoAnalysis = async () => {
+      console.log('Checking for product data:', { productFromState, productId, autoStart });
+      
+      // If we have product data from navigation state
+      if (productFromState) {
+        console.log('Using product passed via navigation state:', productFromState);
+        setProductDetails(productFromState);
+        const formattedText = formatProductDetails(productFromState);
+        console.log('Formatted product text:', formattedText);
+        setProductText(formattedText);
+        
+        // Auto-trigger analysis if enabled
+        if (autoAnalyzeFromState || autoStart) {
+          console.log('Auto-starting analysis for product from state');
+          setTimeout(() => {
+            analyzeProduct(formattedText);
+          }, 300);
+        }
+        return;
+      }
+      
+      // Otherwise try to fetch by ID
+      if (productId) {
+        console.log('Auto-analysis triggered for product ID:', productId);
+        console.log('Auto-start parameter:', autoStart);
+        
+        // Fetch product details
+        try {
+          setFetchingProduct(true);
+          setError('');
+          
+          // Mock product details if API call fails in development
+          let product;
+          try {
+            // Try to get product from API
+            const response = await productAPI.getProductById(productId);
+            product = response.data;
+            console.log('Product details fetched:', product);
+          } catch (apiError) {
+            console.error('API error:', apiError);
+            
+            // If in development and API fails, use mock data based on the product ID
+            if (process.env.NODE_ENV === 'development') {
+              // Find the product from our mock list based on ID
+              const mockProducts = [
+                {
+                  id: '1',
+                  name: 'Eco-Friendly Smartphone',
+                  category: 'Electronics',
+                  description: 'Made with recycled materials and designed for easy repair and recycling at end of life.',
+                  materials: ['Recycled Aluminum', 'Recycled Plastic', 'Glass'],
+                  manufacturingLocation: 'Germany'
+                },
+                {
+                  id: '2',
+                  name: 'Organic Cotton T-Shirt',
+                  category: 'Clothing',
+                  description: 'Made with 100% organic cotton grown without harmful pesticides or synthetic fertilizers.',
+                  materials: ['Organic Cotton'],
+                  manufacturingLocation: 'Portugal'
+                },
+                {
+                  id: '3',
+                  name: 'Bamboo Kitchen Utensils',
+                  category: 'Home Goods',
+                  description: 'Sustainable bamboo kitchen utensils that are biodegradable and renewable.',
+                  materials: ['Bamboo'],
+                  manufacturingLocation: 'Vietnam'
+                },
+                {
+                  id: '4',
+                  name: 'Solar-Powered Power Bank',
+                  category: 'Electronics',
+                  description: 'Charge your devices using clean solar energy. Includes recycled components.',
+                  materials: ['Recycled Plastic', 'Silicon', 'Lithium Battery'],
+                  manufacturingLocation: 'China'
+                },
+                {
+                  id: '5',
+                  name: 'Plant-Based Laundry Detergent',
+                  category: 'Home Goods',
+                  description: 'Biodegradable laundry detergent made from plant-derived ingredients.',
+                  materials: ['Plant Extracts', 'Natural Enzymes'],
+                  manufacturingLocation: 'USA'
+                },
+                {
+                  id: '6',
+                  name: 'Recycled Paper Notebook',
+                  category: 'Home Goods',
+                  description: '100% recycled paper notebook with vegetable-based ink printing.',
+                  materials: ['Recycled Paper', 'Vegetable Ink'],
+                  manufacturingLocation: 'Canada'
+                }
+              ];
+              
+              product = mockProducts.find(p => p.id === productId);
+              console.log('Using mock product data:', product);
+            }
+          }
+          
+          if (product) {
+            setProductDetails(product);
+            const formattedText = formatProductDetails(product);
+            console.log('Formatted product text:', formattedText);
+            setProductText(formattedText);
+            
+            // Auto-trigger analysis if autoStart is true
+            if (autoStart && formattedText) {
+              console.log('Auto-starting analysis for product');
+              // Short delay to ensure state has updated
+              setTimeout(() => {
+                analyzeProduct(formattedText);
+              }, 300);
+            }
+          } else {
+            setError('Product not found. Please try entering product details manually.');
+          }
+        } finally {
+          setFetchingProduct(false);
+        }
+      }
+    };
+    
+    handleAutoAnalysis();
+  }, [productFromState, autoAnalyzeFromState, productId, autoStart]); // Run when parameters change
   
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
   };
   
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!productText.trim()) {
+  // Extracted analysis logic to be reusable
+  const analyzeProduct = async (text) => {
+    if (!text.trim()) {
       setError('Please enter product details to analyze.');
       return;
     }
@@ -92,14 +264,79 @@ function AnalysisPage() {
     setError('');
     
     try {
-      // Make API call to the backend
-      const response = await axios.post('/api/analysis/analyze-text', { productText });
-      setAnalysis(response.data);
+      console.log('Starting analysis with text:', text);
+      
+      // Try to use the API service
+      let analysisData;
+      try {
+        const response = await analysisAPI.analyzeProductText(text);
+        analysisData = response.data;
+        console.log('Analysis API response:', analysisData);
+      } catch (apiError) {
+        console.error('API error during analysis:', apiError);
+        
+        // If we're in development, generate mock data
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Using mock analysis data in development');
+          
+          // Generate scores based on text content
+          const materialScore = text.toLowerCase().includes('recycled') ? 8.5 : 6.0;
+          const carbonScore = text.toLowerCase().includes('china') ? 5.8 : 7.4;
+          const waterScore = text.toLowerCase().includes('organic') ? 8.7 : 6.5;
+          
+          // Calculate overall score as average of other scores
+          const overallScore = Number(((materialScore + carbonScore + waterScore) / 3).toFixed(1));
+          
+          // Generate mock response
+          analysisData = {
+            scores: {
+              overall: overallScore,
+              carbon: carbonScore,
+              water: waterScore,
+              resources: materialScore
+            },
+            explanation: `This ${text.toLowerCase().includes('electronic') ? 'electronic' : 'consumer'} product has a moderate environmental impact. ${
+              text.toLowerCase().includes('recycled') ? 'The use of recycled materials is commendable and reduces resource consumption.' : 'Consider using more recycled or sustainable materials in the product.'
+            } ${
+              text.toLowerCase().includes('china') ? 'Manufacturing in China increases the carbon footprint due to transportation distance and potentially higher emissions from energy sources.' : 'The manufacturing location provides reasonable proximity to markets, reducing transportation emissions.'
+            } ${
+              text.toLowerCase().includes('packaging') ? 'The packaging choices show attention to environmental concerns.' : 'No information on packaging was provided, which is an area for potential improvement.'
+            }`,
+            suggestions: `Consider sourcing materials from locations closer to manufacturing. Implement more renewable energy in the production process. Explore biodegradable packaging alternatives. ${
+              text.toLowerCase().includes('recycled') ? 'Increase the percentage of recycled materials used.' : 'Incorporate recycled materials into the product design.'
+            } ${
+              text.toLowerCase().includes('plastic') ? 'Reduce plastic components or switch to bioplastics where possible.' : 'Ensure all materials are easily separable for recycling at end of life.'
+            }`
+          };
+        } else {
+          throw apiError; // Re-throw for non-development environments
+        }
+      }
+      
+      if (analysisData) {
+        setAnalysis(analysisData);
+      } else {
+        throw new Error('No analysis data received');
+      }
     } catch (err) {
       console.error('Error analyzing product:', err);
       setError(err.response?.data?.message || 'An error occurred while analyzing the product. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+  
+  // Form submission handler
+  const handleSubmit = async (e) => {
+    if (e) e.preventDefault();
+    await analyzeProduct(productText);
+  };
+  
+  // Handle back button if product was passed from search
+  const handleBack = () => {
+    if (productId) {
+      // Navigate back to the main page where ProductSearchPage is likely located
+      navigate('/');
     }
   };
   
@@ -130,6 +367,18 @@ function AnalysisPage() {
       </Box>
       
       <Container maxWidth="md" sx={{ py: 6 }}>
+        {/* Back button if coming from product search */}
+        {productId && (
+          <Button 
+            startIcon={<ArrowBackIcon />} 
+            onClick={handleBack}
+            sx={{ mb: 2 }}
+          >
+            Back to Products
+          </Button>
+        )}
+        
+        {/* Product information form */}
         <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
           <Typography variant="h5" gutterBottom>
             Product Information
@@ -139,39 +388,48 @@ function AnalysisPage() {
             Include information about materials, manufacturing process, packaging, and origin if available.
           </Typography>
           
-          <form onSubmit={handleSubmit}>
-            <TextField
-              label="Product Details"
-              multiline
-              rows={6}
-              fullWidth
-              value={productText}
-              onChange={(e) => setProductText(e.target.value)}
-              placeholder="Example: This smartphone is made with an aluminum body, glass screen, and lithium-ion battery. It's manufactured in China and packaged in recycled cardboard with plastic film."
-              sx={{ mb: 3 }}
-              required
-            />
-            
-            {error && (
-              <Alert severity="error" sx={{ mb: 3 }}>
-                {error}
-              </Alert>
-            )}
-            
-            <Button
-              type="submit"
-              variant="contained"
-              size="large"
-              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <AnalyticsIcon />}
-              disabled={loading || !productText.trim()}
-              fullWidth
-              sx={{ py: 1.5 }}
-            >
-              {loading ? 'Analyzing...' : 'Analyze Product'}
-            </Button>
-          </form>
+          {/* Loading indicator when fetching product */}
+          {fetchingProduct ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <form onSubmit={handleSubmit}>
+              <TextField
+                label="Product Details"
+                multiline
+                rows={6}
+                fullWidth
+                value={productText}
+                onChange={(e) => setProductText(e.target.value)}
+                placeholder="Example: This smartphone is made with an aluminum body, glass screen, and lithium-ion battery. It's manufactured in China and packaged in recycled cardboard with plastic film."
+                sx={{ mb: 3 }}
+                required
+              />
+              
+              {error && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                  {error}
+                </Alert>
+              )}
+              
+              {/* Modified button - removed loading indicator and fixed text */}
+              <Button
+                type="submit"
+                variant="contained"
+                size="large"
+                startIcon={<AnalyticsIcon />}
+                disabled={loading || !productText.trim()}
+                fullWidth
+                sx={{ py: 1.5 }}
+              >
+                Analyze Product
+              </Button>
+            </form>
+          )}
         </Paper>
         
+        {/* Main loading indicator - kept this one */}
         {loading && (
           <Box sx={{ textAlign: 'center', py: 4 }}>
             <CircularProgress size={60} />
@@ -298,41 +556,43 @@ function AnalysisPage() {
           </Card>
         )}
         
-        <Paper elevation={1} sx={{ p: 3, bgcolor: 'background.paper', borderLeft: '4px solid', borderColor: 'primary.main' }}>
-          <Typography variant="h6" gutterBottom>
-            Tips for Accurate Analysis
-          </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={6}>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
-                <Chip label="1" color="primary" size="small" sx={{ mr: 1 }} />
-                <Typography variant="body2">
-                  Include materials used in the product (metal, plastic, fabric types)
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
-                <Chip label="2" color="primary" size="small" sx={{ mr: 1 }} />
-                <Typography variant="body2">
-                  Mention manufacturing location and processes if known
-                </Typography>
-              </Box>
+        {!productDetails && (
+          <Paper elevation={1} sx={{ p: 3, bgcolor: 'background.paper', borderLeft: '4px solid', borderColor: 'primary.main' }}>
+            <Typography variant="h6" gutterBottom>
+              Tips for Accurate Analysis
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
+                  <Chip label="1" color="primary" size="small" sx={{ mr: 1 }} />
+                  <Typography variant="body2">
+                    Include materials used in the product (metal, plastic, fabric types)
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
+                  <Chip label="2" color="primary" size="small" sx={{ mr: 1 }} />
+                  <Typography variant="body2">
+                    Mention manufacturing location and processes if known
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
+                  <Chip label="3" color="primary" size="small" sx={{ mr: 1 }} />
+                  <Typography variant="body2">
+                    Describe packaging materials and product lifespan
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                  <Chip label="4" color="primary" size="small" sx={{ mr: 1 }} />
+                  <Typography variant="body2">
+                    Note any eco-certifications or sustainability claims
+                  </Typography>
+                </Box>
+              </Grid>
             </Grid>
-            <Grid item xs={12} md={6}>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
-                <Chip label="3" color="primary" size="small" sx={{ mr: 1 }} />
-                <Typography variant="body2">
-                  Describe packaging materials and product lifespan
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-                <Chip label="4" color="primary" size="small" sx={{ mr: 1 }} />
-                <Typography variant="body2">
-                  Note any eco-certifications or sustainability claims
-                </Typography>
-              </Box>
-            </Grid>
-          </Grid>
-        </Paper>
+          </Paper>
+        )}
       </Container>
     </Box>
   );

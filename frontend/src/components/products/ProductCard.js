@@ -14,7 +14,7 @@ import {
   Tooltip,
   Checkbox
 } from '@mui/material';
-import EcoIcon from '@mui/icons-material/Eco';
+import EcoIcon from '../icons/EcoIcon';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';

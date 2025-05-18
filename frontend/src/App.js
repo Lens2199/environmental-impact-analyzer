@@ -9,7 +9,6 @@ import { AppProvider } from './context/AppContext';
 // Import components
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
-import Notifications from './components/common/Notifications';
 
 // Import pages
 import HomePage from './pages/HomePage';
@@ -17,10 +16,8 @@ import ProductSearchPage from './pages/ProductSearchPage';
 import ProductDetailPage from './pages/ProductDetailPage';
 import AnalysisPage from './pages/AnalysisPage';
 import ComparisonPage from './pages/ComparisonPage';
-import AboutPage from './pages/AboutPage';
 import AddProductPage from './pages/AddProductPage';
 import EditProductPage from './pages/EditProductPage';
-import SustainabilityGuidePage from './pages/SustainabilityGuidePage';
 
 // Create a theme with eco-friendly colors
 const theme = createTheme({
@@ -121,14 +118,11 @@ function App() {
               <Route path="/products/:id" element={<ProductDetailPage />} />
               <Route path="/analyze" element={<AnalysisPage />} />
               <Route path="/compare" element={<ComparisonPage />} />
-              <Route path="/about" element={<AboutPage />} />
               <Route path="/products/add" element={<AddProductPage />} />
               <Route path="/products/:id/edit" element={<EditProductPage />} />
-              <Route path="/guide" element={<SustainabilityGuidePage />} />
             </Routes>
           </main>
           <Footer />
-          <Notifications />
         </Router>
       </AppProvider>
     </ThemeProvider>

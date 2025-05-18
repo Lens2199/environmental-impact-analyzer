@@ -1,0 +1,79 @@
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  code {
+    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+      monospace;
+  }
+  
+  .eco-gradient-bg {
+    background: linear-gradient(120deg, rgba(46,125,50,1) 0%, rgba(0,121,107,1) 100%);
+    color: white;
+  }
+  
+  .product-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+  }
+  
+  .analysis-score-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin: 0 auto;
+  }
+  
+  .score-excellent {
+    background-color: #43a047;
+    color: white;
+  }
+  
+  .score-good {
+    background-color: #7cb342;
+    color: white;
+  }
+  
+  .score-average {
+    background-color: #fdd835;
+    color: black;
+  }
+  
+  .score-poor {
+    background-color: #fb8c00;
+    color: white;
+  }
+  
+  .score-bad {
+    background-color: #e53935;
+    color: white;
+  }
+  
+  .page-transition {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }

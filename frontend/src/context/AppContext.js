@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { productAPI, analysisAPI } from '../services/api';
+import { analysisAPI } from '../services/api';
 
 // Create context
 const AppContext = createContext();
@@ -15,8 +15,11 @@ export const AppProvider = ({ children }) => {
   const [loadingAnalyses, setLoadingAnalyses] = useState(false);
   const [analysesError, setAnalysesError] = useState(null);
   
-  // Selected products for comparison
+  // Selected products for comparison - initialize as empty array
   const [selectedProducts, setSelectedProducts] = useState([]);
+  
+  // NEW: Store full product objects, not just IDs
+  const [selectedProductObjects, setSelectedProductObjects] = useState([]);
   
   // User preferences (could be expanded or stored in localStorage)
   const [preferences, setPreferences] = useState({
@@ -31,6 +34,7 @@ export const AppProvider = ({ children }) => {
   // Fetch recent analyses on component mount
   useEffect(() => {
     fetchRecentAnalyses();
+    console.log('AppContext initialized');
   }, []);
   
   // Function to fetch recent analyses
@@ -50,28 +54,72 @@ export const AppProvider = ({ children }) => {
     }
   };
   
-  // Add or remove product from selected products for comparison
-  const toggleProductSelection = (productId) => {
-    if (selectedProducts.includes(productId)) {
-      setSelectedProducts(selectedProducts.filter(id => id !== productId));
-    } else {
-      // Limit to 3 products maximum
-      if (selectedProducts.length < 3) {
-        setSelectedProducts([...selectedProducts, productId]);
-      } else {
-        // Add notification if more than 3 products are selected
-        addNotification({
-          type: 'warning',
-          message: 'You can only compare up to 3 products at a time',
-          duration: 3000
-        });
-      }
+  // Helper to get product ID consistently
+  const getProductId = (product) => {
+    if (!product) return null;
+    return product._id || product.id || null;
+  };
+  
+  // Add or remove product from selected products for comparison - ENHANCED TO STORE FULL OBJECTS
+  const toggleProductSelection = (productId, productObject = null) => {
+    console.log('toggleProductSelection called with:', productId);
+    
+    // Guard against undefined values
+    if (!productId) {
+      console.error('Attempted to toggle selection with invalid productId:', productId);
+      return;
     }
+    
+    setSelectedProducts(prevSelected => {
+      console.log('Previous selected products:', prevSelected);
+      
+      // Make a defensive copy of prevSelected to ensure it's an array
+      const safeSelected = Array.isArray(prevSelected) ? [...prevSelected] : [];
+      
+      // Check if already selected
+      if (safeSelected.includes(productId)) {
+        console.log('Removing product from selection');
+        
+        // Also remove from product objects
+        setSelectedProductObjects(prev => 
+          prev.filter(product => getProductId(product) !== productId)
+        );
+        
+        const newSelection = safeSelected.filter(id => id !== productId);
+        console.log('New selection will be:', newSelection);
+        return newSelection;
+      } else {
+        // Add if fewer than 3 already selected
+        if (safeSelected.length < 3) {
+          console.log('Adding product to selection');
+          
+          // Add to product objects if provided
+          if (productObject) {
+            setSelectedProductObjects(prev => [...prev, productObject]);
+          }
+          
+          const newSelection = [...safeSelected, productId];
+          console.log('New selection will be:', newSelection);
+          return newSelection;
+        } else {
+          console.log('Selection limit reached, not adding');
+          // Add notification about max products
+          addNotification({
+            type: 'warning',
+            message: 'You can only compare up to 3 products at a time',
+            duration: 3000
+          });
+          return safeSelected;
+        }
+      }
+    });
   };
   
   // Clear all selected products
   const clearSelectedProducts = () => {
+    console.log('Clearing all selected products');
     setSelectedProducts([]);
+    setSelectedProductObjects([]);  // Clear product objects too
   };
   
   // Update user preferences
@@ -122,6 +170,16 @@ export const AppProvider = ({ children }) => {
     }
   }, []);
   
+  // Debug effect to log selected products changes
+  useEffect(() => {
+    console.log('selectedProducts state changed to:', selectedProducts);
+  }, [selectedProducts]);
+  
+  // Debug effect to log selected product objects
+  useEffect(() => {
+    console.log('selectedProductObjects state changed to:', selectedProductObjects);
+  }, [selectedProductObjects]);
+  
   // Value to be provided by the context
   const contextValue = {
     // Analyses
@@ -132,8 +190,10 @@ export const AppProvider = ({ children }) => {
     
     // Products for comparison
     selectedProducts,
+    selectedProductObjects,  // NEW: Export full objects
     toggleProductSelection,
     clearSelectedProducts,
+    getProductId,            // NEW: Helper function
     
     // User preferences
     preferences,
