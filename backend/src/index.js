@@ -87,10 +87,14 @@ const startServer = async () => {
     
     // Start listening for requests
     app.listen(PORT, () => {
+      const appUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://environmental-impact-analyzer.onrender.com' 
+        : `http://localhost:${PORT}`;
+        
       console.log(`✅ Server running on port ${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🔒 CORS Origin: ${process.env.CORS_ORIGIN || 'http://localhost:3000'}`);
-      console.log(`🚀 API available at: http://localhost:${PORT}/api`);
+      console.log(`🚀 API available at: ${appUrl}/api`);
     });
 
   } catch (error) {
