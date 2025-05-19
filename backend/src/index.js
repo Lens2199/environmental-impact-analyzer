@@ -19,7 +19,8 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:3000',
   'https://environmental-impact-analyzer.vercel.app',
-  'https://environmental-impact-analyzer-7rpm1cjbt-deos-projects-c99867b4.vercel.app'
+  'https://environmental-impact-analyzer-7rpm1cjbt-deos-projects-c99867b4.vercel.app',
+  'https://lens2199.github.io'
 ];
 
 // If CORS_ORIGIN is set, add it to allowed origins
@@ -42,9 +43,10 @@ app.use(cors({
     if (allowedOrigins.indexOf(origin) === -1) {
       console.log(`Origin ${origin} not allowed by CORS`);
       
-      // Check if it's a Vercel preview deployment
-      if (origin.match(/https:\/\/environmental-impact-analyzer-.*\.vercel\.app/)) {
-        console.log('Allowing Vercel preview deployment');
+      // Check if it's a Vercel preview deployment or GitHub Pages
+      if (origin.match(/https:\/\/environmental-impact-analyzer-.*\.vercel\.app/) ||
+          origin.match(/https:\/\/lens2199\.github\.io/)) {
+        console.log('Allowing Vercel preview or GitHub Pages deployment');
         return callback(null, true);
       }
       
