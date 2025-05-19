@@ -1,0 +1,19 @@
+{
+  "files": {
+    "main.css": "/environmental-impact-analyzer/static/css/main.7ac9a899.css",
+    "main.js": "/environmental-impact-analyzer/static/js/main.7da26da2.js",
+    "static/media/Eco-Friendly Smartphone.jpg": "/environmental-impact-analyzer/static/media/Eco-Friendly Smartphone.b346479ddc135f4832ca.jpg",
+    "static/media/Bamboo Kitchen Utensils.jpg": "/environmental-impact-analyzer/static/media/Bamboo Kitchen Utensils.370a75661aedffd4d99d.jpg",
+    "static/media/Recycled Paper Notebook.jpg": "/environmental-impact-analyzer/static/media/Recycled Paper Notebook.aa2cd0e217061b41476c.jpg",
+    "static/media/Solar-Powered Power Bank.jpg": "/environmental-impact-analyzer/static/media/Solar-Powered Power Bank.f9e6f8a6e31dd08bbac9.jpg",
+    "static/media/Organic Cotton T-Shirt.jpg": "/environmental-impact-analyzer/static/media/Organic Cotton T-Shirt.30e3a88d850452393017.jpg",
+    "static/media/Plant-Based Laundry Detergent.jpg": "/environmental-impact-analyzer/static/media/Plant-Based Laundry Detergent.fbd64fcbc01bcaece1d9.jpg",
+    "index.html": "/environmental-impact-analyzer/index.html",
+    "main.7ac9a899.css.map": "/environmental-impact-analyzer/static/css/main.7ac9a899.css.map",
+    "main.7da26da2.js.map": "/environmental-impact-analyzer/static/js/main.7da26da2.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.7ac9a899.css",
+    "static/js/main.7da26da2.js"
+  ]
+}
