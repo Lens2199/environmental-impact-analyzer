@@ -4,10 +4,11 @@
  */
 const { supabase } = require('../config/database');
 
-// Mock products for development mode
+// Mock products with both numeric IDs and UUIDs
 const mockProducts = [
   {
     id: '1',
+    uuid: '123e4567-e89b-12d3-a456-426614174001',
     name: 'Eco-Friendly Smartphone',
     category: 'Electronics',
     description: 'Made with recycled materials and designed for easy repair and recycling at end of life.',
@@ -20,6 +21,7 @@ const mockProducts = [
   },
   {
     id: '2',
+    uuid: '123e4567-e89b-12d3-a456-426614174002',
     name: 'Organic Cotton T-Shirt',
     category: 'Clothing',
     description: 'Made with 100% organic cotton grown without harmful pesticides or synthetic fertilizers.',
@@ -32,6 +34,7 @@ const mockProducts = [
   },
   {
     id: '3',
+    uuid: '123e4567-e89b-12d3-a456-426614174003',
     name: 'Bamboo Kitchen Utensils',
     category: 'Home Goods',
     description: 'Sustainable bamboo kitchen utensils that are biodegradable and renewable.',
@@ -44,6 +47,7 @@ const mockProducts = [
   },
   {
     id: '4',
+    uuid: '123e4567-e89b-12d3-a456-426614174004',
     name: 'Solar-Powered Power Bank',
     category: 'Electronics',
     description: 'Charge your devices using clean solar energy. Includes recycled components.',
@@ -56,6 +60,7 @@ const mockProducts = [
   },
   {
     id: '5',
+    uuid: '123e4567-e89b-12d3-a456-426614174005',
     name: 'Plant-Based Laundry Detergent',
     category: 'Home Goods',
     description: 'Biodegradable laundry detergent made from plant-derived ingredients.',
@@ -68,6 +73,7 @@ const mockProducts = [
   },
   {
     id: '6',
+    uuid: '123e4567-e89b-12d3-a456-426614174006',
     name: 'Recycled Paper Notebook',
     category: 'Home Goods',
     description: '100% recycled paper notebook with vegetable-based ink printing.',
@@ -81,34 +87,255 @@ const mockProducts = [
 ];
 
 /**
+ * Helper to check if a string is a valid UUID
+ * @param {string} str - String to check
+ * @returns {boolean} - True if valid UUID
+ */
+const isUUID = (str) => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+};
+
+/**
+ * Helper to check if string is a numeric ID
+ * @param {string} str - String to check
+ * @returns {boolean} - True if numeric ID
+ */
+const isNumericId = (str) => {
+  return /^\d+$/.test(str);
+};
+
+/**
  * Helper to determine if we should use mock data
  * @returns {boolean} - True if mock data should be used
  */
 const shouldUseMockData = () => {
   return process.env.NODE_ENV === 'development' && 
-         (process.env.REACT_APP_USE_MOCK_DATA === 'true' || 
+         (process.env.SEED_DB === 'true' || 
           process.env.USE_MOCK_DATA === 'true');
 };
 
 /**
- * Get a mock product by ID
- * @param {string} id - Product ID (numeric)
- * @returns {Object} - Mock product data
+ * Get a product by ID (either UUID or numeric ID)
+ * 
+ * @param {string} id - Product ID (UUID or numeric)
+ * @returns {Promise<Object>} - Product data
  */
-const getMockProductById = (id) => {
-  // Convert ID to string for comparison
-  const stringId = String(id);
-  const mockProduct = mockProducts.find(p => p.id === stringId);
-  
-  if (!mockProduct) {
-    throw new Error('Product not found');
+const getProductById = async (id) => {
+  // Always check for mock data first in development
+  if (shouldUseMockData()) {
+    console.log(`Using mock data for product ID: ${id}`);
+    const mockProduct = mockProducts.find(p => p.id === id || p.uuid === id);
+    if (mockProduct) {
+      return mockProduct;
+    }
   }
   
-  return mockProduct;
+  try {
+    let query;
+    
+    // Check if the ID is a valid UUID
+    if (isUUID(id)) {
+      // Use standard query with UUID
+      query = supabase
+        .from('products')
+        .select('*')
+        .eq('id', id)
+        .single();
+    } 
+    // Check if the ID is a numeric string
+    else if (isNumericId(id)) {
+      console.log(`Using numeric ID query for: ${id}`);
+      
+      // First try to find by legacy_id if that column exists
+      query = supabase
+        .from('products')
+        .select('*')
+        .eq('legacy_id', id)
+        .single();
+        
+      const { data, error } = await query;
+      
+      // If legacy_id doesn't exist or no product found, try matching UUID that ends with that number
+      if (error || !data) {
+        console.log(`No product found with legacy_id: ${id}, trying UUID lookup`);
+        // Try a wildcard search for UUIDs ending with the ID padded to length 12
+        const paddedId = id.padStart(12, '0');
+        query = supabase
+          .from('products')
+          .select('*')
+          .ilike('id', `%${paddedId}`)
+          .single();
+      } else {
+        return data;
+      }
+    } else {
+      throw new Error('Invalid product ID format');
+    }
+
+    // Execute the query
+    const { data, error } = await query;
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        throw new Error('Product not found');
+      }
+      throw new Error(`Error fetching product: ${error.message}`);
+    }
+
+    // If still in development and no product found, use mock data
+    if (!data && shouldUseMockData()) {
+      console.log(`No product found in database, using mock for ID: ${id}`);
+      const mockProduct = mockProducts.find(p => p.id === id);
+      if (mockProduct) {
+        return mockProduct;
+      }
+    }
+
+    return data;
+  } catch (error) {
+    // In development, fall back to mock data if there's an error
+    if (shouldUseMockData()) {
+      console.log(`Error in database query, using mock for ID: ${id}`);
+      const mockProduct = mockProducts.find(p => p.id === id);
+      if (mockProduct) {
+        return mockProduct;
+      }
+    }
+    
+    // If we still haven't found a product, throw the error
+    throw error;
+  }
 };
 
 /**
- * Get mock products with filtering options
+ * Get all products with optional pagination and filtering
+ * 
+ * @param {Object} options - Query options
+ * @returns {Promise<Object>} - Products data and count
+ */
+const getAllProducts = async (options = {}) => {
+  // Use mock data in development mode
+  if (shouldUseMockData()) {
+    console.log('Using mock product data');
+    
+    const {
+      page = 1,
+      limit = 10,
+      category,
+      search,
+      sortBy = 'created_at',
+      sortOrder = 'desc'
+    } = options;
+
+    let filtered = [...mockProducts];
+    
+    // Apply category filter
+    if (category && category !== 'All Categories') {
+      filtered = filtered.filter(p => p.category === category);
+    }
+    
+    // Apply search filter
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filtered = filtered.filter(p => 
+        p.name.toLowerCase().includes(searchLower) || 
+        p.description.toLowerCase().includes(searchLower) || 
+        (p.materials && p.materials.some(m => m.toLowerCase().includes(searchLower)))
+      );
+    }
+    
+    // Apply sorting
+    filtered.sort((a, b) => {
+      if (sortBy === 'name') {
+        return sortOrder === 'asc' 
+          ? a.name.localeCompare(b.name) 
+          : b.name.localeCompare(a.name);
+      } else if (sortBy === 'created_at') {
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+      }
+      return 0;
+    });
+    
+    // Calculate pagination
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedResults = filtered.slice(startIndex, endIndex);
+    
+    return {
+      products: paginatedResults,
+      total: filtered.length,
+      page,
+      pages: Math.ceil(filtered.length / limit)
+    };
+  }
+
+  // Real database query
+  const {
+    page = 1,
+    limit = 10,
+    category,
+    search,
+    sortBy = 'created_at',
+    sortOrder = 'desc'
+  } = options;
+
+  // Calculate pagination
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
+  // Start building query
+  let query = supabase
+    .from('products')
+    .select('*', { count: 'exact' });
+
+  // Apply category filter if provided
+  if (category && category !== 'All Categories') {
+    query = query.eq('category', category);
+  }
+
+  // Apply search filter if provided
+  if (search) {
+    query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
+  }
+
+  // Apply sorting
+  query = query.order(sortBy, { ascending: sortOrder === 'asc' });
+
+  // Apply pagination
+  query = query.range(from, to);
+
+  // Execute query
+  const { data, error, count } = await query;
+
+  if (error) {
+    console.error('Database error:', error);
+    // Fall back to mock data on error in development mode
+    if (shouldUseMockData()) {
+      console.log('Falling back to mock data after database error');
+      return getMockProducts(options);
+    }
+    throw new Error(`Error fetching products: ${error.message}`);
+  }
+
+  // If we get empty results and we're in development, use mock data as fallback
+  if ((!data || data.length === 0) && shouldUseMockData()) {
+    console.log('No results from database, using mock data');
+    return getMockProducts(options);
+  }
+
+  return {
+    products: data,
+    total: count,
+    page,
+    pages: Math.ceil(count / limit)
+  };
+};
+
+/**
+ * Get mock products with filtering options (internal helper function)
  * @param {Object} options - Filter options
  * @returns {Object} - Filtered products and pagination data
  */
@@ -167,117 +394,8 @@ const getMockProducts = (options = {}) => {
 };
 
 /**
- * Get all products with optional pagination and filtering
- * @param {Object} options - Query options
- * @returns {Promise<Object>} - Products data and count
- */
-const getAllProducts = async (options = {}) => {
-  // Use mock data in development mode
-  if (shouldUseMockData()) {
-    console.log('Using mock product data');
-    return getMockProducts(options);
-  }
-
-  const {
-    page = 1,
-    limit = 10,
-    category,
-    search,
-    sortBy = 'created_at',
-    sortOrder = 'desc'
-  } = options;
-
-  // Calculate pagination
-  const from = (page - 1) * limit;
-  const to = from + limit - 1;
-
-  // Start building query
-  let query = supabase
-    .from('products')
-    .select('*', { count: 'exact' });
-
-  // Apply category filter if provided
-  if (category && category !== 'All Categories') {
-    query = query.eq('category', category);
-  }
-
-  // Apply search filter if provided
-  if (search) {
-    query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
-  }
-
-  // Apply sorting
-  query = query.order(sortBy, { ascending: sortOrder === 'asc' });
-
-  // Apply pagination
-  query = query.range(from, to);
-
-  // Execute query
-  const { data, error, count } = await query;
-
-  if (error) {
-    console.error('Database error:', error);
-    // Fall back to mock data on error in development mode
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Falling back to mock data after database error');
-      return getMockProducts(options);
-    }
-    throw new Error(`Error fetching products: ${error.message}`);
-  }
-
-  return {
-    products: data,
-    total: count,
-    page,
-    pages: Math.ceil(count / limit)
-  };
-};
-
-/**
- * Get a product by ID
- * @param {string} id - Product ID
- * @returns {Promise<Object>} - Product data
- */
-const getProductById = async (id) => {
-  // Use mock data in development mode
-  if (shouldUseMockData()) {
-    console.log(`Using mock data for product ID: ${id}`);
-    return getMockProductById(id);
-  }
-  
-  try {
-    // For UUID formatted IDs, use standard query
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        throw new Error('Product not found');
-      }
-      throw new Error(`Error fetching product: ${error.message}`);
-    }
-
-    return data;
-  } catch (error) {
-    // If the error is related to UUID format and we're in development
-    if (process.env.NODE_ENV === 'development' && 
-        error.message && 
-        error.message.includes('invalid input syntax for type uuid')) {
-      console.log(`UUID format error, falling back to mock data for ID: ${id}`);
-      // Fall back to mock data
-      return getMockProductById(id);
-    }
-    
-    // Otherwise, throw the original error
-    throw error;
-  }
-};
-
-/**
  * Search products by query string
+ * 
  * @param {string} query - Search term
  * @returns {Promise<Array>} - Matching products
  */
@@ -310,6 +428,7 @@ const searchProducts = async (query) => {
 
 /**
  * Get products by category
+ * 
  * @param {string} category - Category name
  * @returns {Promise<Array>} - Products in category
  */
@@ -342,6 +461,7 @@ const getProductsByCategory = async (category) => {
 
 /**
  * Create a new product
+ * 
  * @param {Object} productData - Product data
  * @returns {Promise<Object>} - Created product
  */
@@ -357,6 +477,11 @@ const createProduct = async (productData) => {
     image_url: productData.imageUrl
   };
 
+  // Add a legacy_id if we're using numeric IDs
+  if (productData.id && isNumericId(productData.id)) {
+    product.legacy_id = productData.id;
+  }
+
   // Use mock data in development mode (just return the data)
   if (shouldUseMockData()) {
     console.log('Mock product creation');
@@ -364,6 +489,7 @@ const createProduct = async (productData) => {
     const newId = String(Math.max(...mockProducts.map(p => parseInt(p.id))) + 1);
     const mockProduct = {
       id: newId,
+      uuid: `123e4567-e89b-12d3-a456-42661417400${newId}`, // Create a fake UUID
       ...product,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -387,6 +513,7 @@ const createProduct = async (productData) => {
 
 /**
  * Update a product
+ * 
  * @param {string} id - Product ID
  * @param {Object} productData - Updated product data
  * @returns {Promise<Object>} - Updated product
@@ -409,26 +536,64 @@ const updateProduct = async (id, productData) => {
   // Use mock data in development mode
   if (shouldUseMockData()) {
     console.log(`Mock product update for ID: ${id}`);
-    const index = mockProducts.findIndex(p => p.id === id);
+    let index;
+    
+    // Find product by UUID or numeric ID
+    if (isUUID(id)) {
+      index = mockProducts.findIndex(p => p.uuid === id);
+    } else {
+      index = mockProducts.findIndex(p => p.id === id);
+    }
+    
     if (index === -1) {
       throw new Error('Product not found');
     }
+    
     // Update the product in mock data
     mockProducts[index] = { ...mockProducts[index], ...product };
     return mockProducts[index];
   }
 
-  const { data, error } = await supabase
-    .from('products')
-    .update(product)
-    .eq('id', id)
-    .select();
+  // Handle both UUID and numeric ID
+  let query;
+  
+  if (isUUID(id)) {
+    query = supabase
+      .from('products')
+      .update(product)
+      .eq('id', id)
+      .select();
+  } else if (isNumericId(id)) {
+    query = supabase
+      .from('products')
+      .update(product)
+      .eq('legacy_id', id)
+      .select();
+      
+    const { data, error } = await query;
+    
+    if (error || !data || data.length === 0) {
+      // Try with wildcard UUID
+      const paddedId = id.padStart(12, '0');
+      query = supabase
+        .from('products')
+        .update(product)
+        .ilike('id', `%${paddedId}`)
+        .select();
+    } else {
+      return data[0];
+    }
+  } else {
+    throw new Error('Invalid product ID format');
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(`Error updating product: ${error.message}`);
   }
 
-  if (data.length === 0) {
+  if (!data || data.length === 0) {
     throw new Error('Product not found');
   }
 
@@ -437,6 +602,7 @@ const updateProduct = async (id, productData) => {
 
 /**
  * Delete a product
+ * 
  * @param {string} id - Product ID
  * @returns {Promise<boolean>} - Success status
  */
@@ -444,19 +610,55 @@ const deleteProduct = async (id) => {
   // Use mock data in development mode
   if (shouldUseMockData()) {
     console.log(`Mock product deletion for ID: ${id}`);
-    const index = mockProducts.findIndex(p => p.id === id);
+    let index;
+    
+    // Find product by UUID or numeric ID
+    if (isUUID(id)) {
+      index = mockProducts.findIndex(p => p.uuid === id);
+    } else {
+      index = mockProducts.findIndex(p => p.id === id);
+    }
+    
     if (index === -1) {
       throw new Error('Product not found');
     }
+    
     // Remove from mock array
     mockProducts.splice(index, 1);
     return true;
   }
 
-  const { error } = await supabase
-    .from('products')
-    .delete()
-    .eq('id', id);
+  // Handle both UUID and numeric ID
+  let query;
+  
+  if (isUUID(id)) {
+    query = supabase
+      .from('products')
+      .delete()
+      .eq('id', id);
+  } else if (isNumericId(id)) {
+    query = supabase
+      .from('products')
+      .delete()
+      .eq('legacy_id', id);
+      
+    const { error } = await query;
+    
+    if (error) {
+      // Try with wildcard UUID
+      const paddedId = id.padStart(12, '0');
+      query = supabase
+        .from('products')
+        .delete()
+        .ilike('id', `%${paddedId}`);
+    } else {
+      return true;
+    }
+  } else {
+    throw new Error('Invalid product ID format');
+  }
+
+  const { error } = await query;
 
   if (error) {
     throw new Error(`Error deleting product: ${error.message}`);
