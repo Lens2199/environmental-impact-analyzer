@@ -19,11 +19,19 @@ An AI-powered full-stack web application that helps users evaluate the environme
 
 ---
 
-## 🖼️ Screenshot
+## 🖼️ Screenshots
 
-![Screenshot](https://user-images.githubusercontent.com/your-screenshot-placeholder.png)
+### 🔰 Home Page
+![Home](./frontend/src/assets/hometab%202.png)
 
----
+### 🔍 Product Search
+![Product Search](./frontend/src/assets/productsearchtap%202.png)
+
+### 📈 Analyze Impact
+![Analyzer](./frontend/src/assets/analazertap%202.png)
+
+### 🆚 Compare Products
+![Compare](./frontend/src/assets/comparasontap%202.png)
 
 ## 🧠 How It Works
 
